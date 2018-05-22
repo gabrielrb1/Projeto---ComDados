@@ -1,11 +1,11 @@
 void setup() {
 Serial.begin(9600);
-pinMode(7,OUTPUT); //string que receberá a ação a ser feita pelo usuário
+Serial.setTimeout(100);
 }
 
 void loop() {
+if(Serial.available()){  
 String acao = Serial.readString();  
-if(Serial.available()){
 //Biblioteca de comandos
 //SA -> Slave Act, onde o escravo acende um LED
 //SR -> Slave Read, leitura de uma porta do escravo
