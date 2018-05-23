@@ -7,15 +7,19 @@ void loop() {
 if(Serial.available()){  
 String acao = Serial.readString();  
 //Biblioteca de comandos
-//SA -> Slave Act, onde o escravo acende um LED
+//SW -> Slave Write, onde o escravo acende um LED
 //SR -> Slave Read, leitura de uma porta do escravo
-  if (acao == "SA"){
-    Serial.print("A");
+  if (acao == "SW"){
+    Serial.println("W");
     delay(10);  
   }
-  if (acao == "SR"){
-    Serial.print("R");
+  else if (acao == "SR"){
+    Serial.println("R");
     delay(10);
+  }
+  else
+  {
+    Serial.println("Comando desconhecido");
   }
 }
 
