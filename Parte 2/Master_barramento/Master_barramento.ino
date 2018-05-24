@@ -15,7 +15,11 @@ String acao = Serial.readString();
   }
   else if (acao == "SR"){
     Serial.println("R");
+    Serial.flush();
     delay(10);
+    int leitura = Serial.read();
+    Serial.println("Temperatura: ");
+    Serial.println(leitura);
   }
   else
   {

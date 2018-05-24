@@ -4,7 +4,7 @@ void setup() {
   pinMode(13,OUTPUT); //LED do SA
   pinMode(15,OUTPUT); //LED do SR
   digitalWrite(13,LOW);
-  digitalWrite(15,LOW);
+  analogWrite(15,LOW);
 }
 
 void loop() {
@@ -22,9 +22,9 @@ void loop() {
       }
     }
     if (ordem == 'R'){
-      digitalWrite(15,HIGH);
-      delay(2000);
-      digitalWrite(15,LOW);
+      int temperatura = analogRead(15);
+      Serial.print(temperatura);
+      Serial.flush();
     }
   }
 
