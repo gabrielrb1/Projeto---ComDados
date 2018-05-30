@@ -9,23 +9,34 @@ String acao = Serial.readString();
 //Biblioteca de comandos
 //SW -> Slave Write, onde o escravo acende um LED
 //SR -> Slave Read, leitura de uma porta do escravo
-  if (acao == "SW"){
-    Serial.println("W");
+  if (acao == "S1W"){
+    Serial.print("1");
     delay(10);  
+    Serial.println("W");
+    delay(10);
   }
-  else if (acao == "SR"){
+  if (acao == "S2W"){
+    Serial.print("2");
+    delay(10);  
+    Serial.println("W");
+    delay(10);
+  }
+  //if (acao == "S1R"){
+    //Serial.print("1");
+    //delay(10);  
+    //Serial.println("R");
+    //delay(10);
+  //}
+  if (acao == "S2R"){
+    Serial.print("2");
+    delay(10);  
     Serial.println("R");
     Serial.flush();
-    delay(10);
-    int leitura = Serial.read();
-    Serial.println("Temperatura: ");
-    Serial.println(leitura);
-  }
-  else
-  {
-    Serial.println("Comando desconhecido");
+    if (Serial.find("A")){
+      delay(15);
+      int temperatura = Serial.parseInt();
+      Serial.println(temperatura);
+    }
   }
 }
-
-
 }
