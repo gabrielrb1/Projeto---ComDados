@@ -6,7 +6,7 @@ clc
 tm = 1e-9; %nano segundos
 n = 8;  %tamanho do sinal (bits)
 l = 1000; %Tamanho do bit (ps)
-A = 6;      %amplitude
+A = 1;      %amplitude
 R = rand(1,n);
 
 for i=1:n
@@ -28,29 +28,34 @@ for i=1:n
 end
 
 Qa = Mq(:);
+Qb = -Qa;
 Ra = Mr(:);
+Qr = Qa-Qb;
 
-stairs(Ra)
-ylim([-1.1*A 1.1*A])
-title('Sinal RS485 aleatório')
-xlabel('Tempo (ps)')
-ylabel('Amplitude (V)')
+% stairs(Ra)
+% ylim([-1.1*A 1.1*A])
+% title('Sinal RS485 aleatório')
+% xlabel('Tempo (ps)')
+% ylabel('Amplitude (V)')
 
 figure
 stairs(Qa)
-ylim([-1.1*A 1.1*A])
+hold on
+stairs(Qb)
+stairs(Qr)
+%ylim([-1.1*A 1.1*A])
 title('Sinal RS485 periódico')
 xlabel('Tempo (ps)')
 ylabel('Amplitude (V)')
 
-sinalf = Qa;
+sinalf = Qr;
 %%
 %Fourrier
-Fs = 1e6;            % Sampling frequency    Fs(real) = 500Hz, 1MHz para amostragem, porém deve ser dividido por l pois o vetor esta em ps               
+Fs = 1/(tm*l);            % Sampling frequency    Fs(real) = 500Hz, 1MHz para amostragem, porém deve ser dividido por l pois o vetor esta em ps               
 T = 1/Fs;             % Sampling period       
 L = n*l;             % Length of signal
 
-Y = fft(sinalf);
+Y = fft(Qa);
 P2 = abs(Y/L);
 P1 = P2(1:L/2+1);
 P1(2:end-1) = 2*P1(2:end-1);
@@ -67,7 +72,7 @@ ylabel('Amplitude (V)')
 ts = (0:tm:(n*(tm*l))-(tm))';
 
 %banda limite
-hb = 7.5e6;           
+hb = 5e7;           
 lb = 0;
 
 for i=1:length(f)
@@ -86,23 +91,25 @@ end
 
 %Somatório de senóides
 
- Ss = zeros(1,n*l)';
+ Ssa = zeros(1,n*l)';
 
 for k=1:length(f)
     if f(k) >= lb && f(k) <= hb
-        Ss = Ss + P1(k)*sin(2*pi*f(k)*ts);    
+        Ssa = Ssa + P1(k)*sin(2*pi*f(k)*ts);    
     end
 end
 
+Ssb = -Ssa;
+
 figure
-plot(Ss)
-title('Sinal reconstruido')
+plot(Ssa(1500:3500))
+title('Sinal do canal A reconstruido')
 xlabel('Tempo (ps)')
 ylabel('Amplitude (V)')
 
 %cálculo do erro
 
-E = Ss - sinalf;
+E = Ssa - sinalf;
 Eabs = abs(E);
 Em = mean(Eabs);
 Ermse = sqrt(mean((E).^2));
@@ -113,40 +120,257 @@ title('Erro')
 xlabel('Tempo (ps)')
 ylabel('Amplitude (V)')
 
+figure
+plot(Ssa(1500:3500))
+hold on
+plot(Ssb(1500:3500))
+plot(Ssa(1500:3500)-Ssb(1500:3500))
+title('Sinal RS485 reconstruido')
+xlabel('Tempo (ps)')
+ylabel('Amplitude (V)')
+
+
 %%
 %Interferência
-
-Sh = zeros(1,n*l)';
-
-for h=1:7
-Sh = Sh + (1/(3^(h-1)))*sin(2*pi*60*h*ts);
-end
-figure
-plot(Sh)
-figure
-plot(Ss+Sh)
-
-%%
-%eco
-sinal = Ss;
-delta = round(1150);            %nano segundos
-atenuacao = 0.4;                %atenuação do reflexo
-
-orig = [sinal;zeros(delta,1)];
-echo = [zeros(delta,1);sinal]*(1-atenuacao);
-
-mtEcho = orig + echo;
-
-t = (0:length(mtEcho)-1)/l;
+tse = (0:1000*tm:3000*(n*(tm*l))-(tm))';
+Sh = zeros(1,size(tse,1))';
+Sht = zeros(1,size(tse,1))';
 
 figure
 subplot(2,1,1)
-plot(t,[orig echo])
-legend('Original','Eco')
+for h=1:7
+Sh(:,h)= (1/(3^(h-1)))*sin(2*pi*60*h*tse);
+Sht = Sht + Sh(:,h);
+plot(Sh(:,h))
+hold on
+end
+xlabel('Tempo (ps)')
+ylabel('Amplitude (V)')
+title('Componentes')
+legend('60Hz','120Hz','180Hz','240Hz','300Hz','360Hz','420Hz','location', 'northeastoutside')
+
 
 subplot(2,1,2)
-plot(t,mtEcho)
+plot(Sht)
+title('Somatório Harmonicos')
+xlabel('Tempo (ps)')
+ylabel('Amplitude (V)')
+legend('Resultante','location', 'northeastoutside')
+
+%%
+%eco
+sinala = Ssa;
+sinalb = Ssb;
+d=45;
+SNR = 1.1;                         
+delta = round(l + l*(d/360));            %nano segundos
+
+origa = [sinala;zeros(delta,1)];
+echoa = [zeros(delta,1);sinala]*(1/SNR);
+
+origb = [sinalb;zeros(delta,1)];
+echob = [zeros(delta,1);sinalb]*(1/SNR);
+
+mtEchoa = origa + echoa;
+mtEchob = origb + echob;
+
+
+t = (0:length(mtEchoa)-1)/l;
+
+figure
+subplot(2,1,1)
+plot(t(1:8000),[origa(1:8000) echoa(1:8000)])
+legend('Original','Eco')
+title('Canal A')
+
+subplot(2,1,2)
+plot(t(1:8000),mtEchoa(1:8000))
 legend('Total')
 xlabel('Tempo (ns)')
 
+figure
+subplot(2,1,1)
+plot(t(1:8000),[origb(1:8000) echob(1:8000)])
+legend('Original','Eco')
+title('Canal B')
 
+subplot(2,1,2)
+plot(t(1:8000),mtEchob(1:8000))
+legend('Total')
+xlabel('Tempo (ns)')
+
+figure
+plot(t(1:8000),mtEchoa(1:8000)-mtEchob(1:8000))
+title('Sinal RS485')
+xlabel('Tempo (ns)')
+%%
+%interferencia construtiva sem gibbs
+
+Se = 0:0.01:6;
+Ab = 1;
+Sr = Se.*Ab;
+SNR = 1./((6./Sr)-1);
+figure
+plot(Se,SNR)
+title('Relação SNR e Amplitude do sinal emitido para diferentes níveis de atenuação no trajeto emissor-receptor') 
+xlabel('Amplitude do sinal emitido')
+ylabel('SNR mínimo')
+grid on
+hold on
+xlim([0 6])
+set(gca,'Yscale','log')
+
+Ab = 0.75;
+Sr = Se.*Ab;
+SNR = 1./((6./Sr)-1);
+plot(Se,SNR)
+
+Ab = 0.5;
+Sr = Se.*Ab;
+SNR = 1./((6./Sr)-1);
+plot(Se,SNR)
+
+Ab = 0.25;
+Sr = Se.*Ab;
+SNR = 1./((6./Sr)-1);
+plot(Se,SNR)
+hold on
+
+legend('Atenuação de 0.00','Atenuação de 0.25','Atenuação de 0.50','Atenuação de 0.75','location', 'northwest')
+%%
+%interferencia construtiva com gibbs
+
+Se = 0:0.01:6;
+Sg = Se.*1.18;
+Ab = 1;
+Sr = Sg.*Ab;
+SNR = 1./((5.08./Sr)-1);
+figure
+plot(Se,SNR)
+title('Relação SNR e Amplitude do sinal emitido para diferentes níveis de atenuação no trajeto emissor-receptor') 
+xlabel('Amplitude do sinal emitido')
+ylabel('SNR mínimo')
+grid on
+hold on
+xlim([0 6])
+set(gca,'Yscale','log')
+
+Ab = 0.75;
+Sr = Sg.*Ab;
+SNR = 1./((5.08./Sr)-1);
+plot(Se,SNR)
+
+Ab = 0.5;
+Sr = Sg.*Ab;
+SNR = 1./((5.08./Sr)-1);
+plot(Se,SNR)
+
+Ab = 0.25;
+Sr = Sg.*Ab;
+SNR = 1./((5.08./Sr)-1);
+plot(Se,SNR)
+hold on
+
+legend('Atenuação de 0.00','Atenuação de 0.25','Atenuação de 0.50','Atenuação de 0.75','location', 'northwest')
+%%
+%interferencia destrutiva sem leitura
+
+Se = 0:0.01:6;
+Ab = 1;
+Sr = Se.*Ab;
+SNR = -1./((0.2./Sr)-1);
+figure
+plot(Se,SNR)
+title('Relação SNR e Amplitude do sinal emitido para diferentes níveis de atenuação no trajeto emissor-receptor') 
+xlabel('Amplitude do sinal emitido')
+ylabel('SNR mínimo')
+grid on
+hold on
+xlim([0 6])
+set(gca,'Yscale','log')
+
+Ab = 0.75;
+Sr = Se.*Ab;
+SNR = -1./((0.2./Sr)-1);
+plot(Se,SNR)
+
+Ab = 0.5;
+Sr = Se.*Ab;
+SNR = -1./((0.2./Sr)-1);
+plot(Se,SNR)
+
+Ab = 0.25;
+Sr = Se.*Ab;
+SNR = -1./((0.2./Sr)-1);
+plot(Se,SNR)
+hold on
+
+legend('Atenuação de 0.00','Atenuação de 0.25','Atenuação de 0.50','Atenuação de 0.75')
+
+%%
+%interferencia destrutiva com leitura errada
+
+Se = 0:0.01:6;
+Ab = 1;
+Sr = Se.*Ab;
+SNR = -1./((-0.2./Sr)-1);
+figure
+plot(Se,SNR)
+title('Relação SNR e Amplitude do sinal emitido para diferentes níveis de atenuação no trajeto emissor-receptor') 
+xlabel('Amplitude do sinal emitido')
+ylabel('SNR mínimo')
+grid on
+hold on
+xlim([0 6])
+set(gca,'Yscale','log')
+
+Ab = 0.75;
+Sr = Se.*Ab;
+SNR = -1./((-0.2./Sr)-1);
+plot(Se,SNR)
+
+Ab = 0.5;
+Sr = Se.*Ab;
+SNR = -1./((-0.2./Sr)-1);
+plot(Se,SNR)
+
+Ab = 0.25;
+Sr = Se.*Ab;
+SNR = -1./((-0.2./Sr)-1);
+plot(Se,SNR)
+hold on
+
+legend('Atenuação de 0.00','Atenuação de 0.25','Atenuação de 0.50','Atenuação de 0.75')
+%%
+%Entre curvas
+
+Se = 0:0.01:6;
+Sg = Se.*1.18;
+Ab = 1;
+Sr = Sg.*Ab;
+SNRu = 1./((5.08./Sr)-1);
+
+Se = 0:0.01:6;
+Ab = 1;
+Sr = Se.*Ab;
+SNRd = -1./((0.2./Sr)-1);
+
+SNR = [SNRd(1:225) SNRu(226:end)];
+figure
+plot(Se,SNR)
+hold on
+grid on
+set(gca,'Yscale','log')
+title('Relação SNR e Amplitude do sinal emitido') 
+xlabel('Amplitude do sinal emitido')
+ylabel('SNR mínimo')
+
+Ab = 0.75;
+Sr = Sg.*Ab;
+Sr = Se.*Ab;
+SNRu = 1./((5.08./Sr)-1);
+SNRd = -1./((0.2./Sr)-1);
+SNR = [SNRd(1:352) SNRu(353:end)];
+plot(Se,SNR)
+
+legend('Atenuação de 0.00','Atenuação de 0.25')
