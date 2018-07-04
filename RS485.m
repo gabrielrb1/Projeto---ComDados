@@ -6,7 +6,7 @@ clc
 tm = 1e-9; %nano segundos
 n = 8;  %tamanho do sinal (bits)
 l = 1000; %Tamanho do bit (ps)
-A = 1;      %amplitude
+A = 4;      %amplitude
 R = rand(1,n);
 
 for i=1:n
@@ -101,6 +101,7 @@ end
 
 Ssb = -Ssa;
 
+
 figure
 plot(Ssa(1500:3500))
 title('Sinal do canal A reconstruido')
@@ -136,6 +137,8 @@ tse = (0:1000*tm:3000*(n*(tm*l))-(tm))';
 Sh = zeros(1,size(tse,1))';
 Sht = zeros(1,size(tse,1))';
 
+SsM = Ssa;
+
 figure
 subplot(2,1,1)
 for h=1:7
@@ -143,6 +146,7 @@ Sh(:,h)= (1/(3^(h-1)))*sin(2*pi*60*h*tse);
 Sht = Sht + Sh(:,h);
 plot(Sh(:,h))
 hold on
+SsM = SsM + (2/(3^(h-1)))*sin((2*pi*60*h*ts)+deg2rad(90));
 end
 xlabel('Tempo (ps)')
 ylabel('Amplitude (V)')
@@ -156,6 +160,15 @@ title('Somatório Harmonicos')
 xlabel('Tempo (ps)')
 ylabel('Amplitude (V)')
 legend('Resultante','location', 'northeastoutside')
+
+figure
+plot(SsM)
+title('Efeito da interferência eletromagnética')
+xlabel('Tempo (ps)')
+ylabel('Amplitude (V)')
+hold on
+plot(Ssa)
+legend('Sinal com interferência','Sinal RS485 original')
 
 %%
 %eco
@@ -374,3 +387,78 @@ SNR = [SNRd(1:352) SNRu(353:end)];
 plot(Se,SNR)
 
 legend('Atenuação de 0.00','Atenuação de 0.25')
+
+%%
+%Interferência eletromagnética construtiva
+figure
+
+Se = 0:0.01:6;
+Sg = Se.*1.18;
+Ab = 1;
+SNRau = ((Ab)./((6./Sg)-1));
+plot(Se,SNRau)
+hold on
+Ab = 0.75;
+SNRbu = ((Ab)./((6./Sg)-1));
+plot(Se,SNRbu)
+Ab = 0.5;
+SNRcu = ((Ab)./((6./Sg)-1));
+plot(Se,SNRcu)
+Ab = 0.25;
+SNRdu = ((Ab)./((6./Sg)-1));
+plot(Se,SNRdu)
+
+title('Relação SNR e Amplitude do sinal emitido') 
+xlabel('Amplitude do sinal emitido')
+ylabel('SNR mínimo')
+set(gca,'Yscale','log')
+legend('Atenuação  de 0.00','Atenuação de 0.25','Atenuação de 0.50','Atenuação de 0.75')
+grid on
+hold off
+%%
+%Interferência eletromagnética destrutiva
+figure
+
+Se = 0:0.01:6;
+Sg = Se.*1.18;
+Ab = 1;
+SNRad = -((Ab)./(((0.2)./Sg)-1));
+plot(Se,SNRad)
+hold on
+Ab = 0.75;
+SNRbd = -((Ab)./(((0.2)./Sg)-1));
+plot(Se,SNRbd)
+Ab = 0.5;
+SNRcd = -((Ab)./(((0.2)./Sg)-1));
+plot(Se,SNRcd)
+Ab = 0.25;
+SNRdd = -((Ab)./(((0.2)./Sg)-1));
+plot(Se,SNRdd)
+
+title('Relação SNR e Amplitude do sinal emitido') 
+xlabel('Amplitude do sinal emitido')
+ylabel('SNR mínimo')
+set(gca,'Yscale','log')
+legend('Atenuação  de 0.00','Atenuação de 0.25','Atenuação de 0.50','Atenuação de 0.75')
+grid on
+hold off
+
+%%
+SNRa = [SNRad(1:263) SNRau(264:end)]; 
+SNRb = [SNRbd(1:263) SNRbu(264:end)]; 
+SNRc = [SNRcd(1:263) SNRcu(264:end)]; 
+SNRd = [SNRdd(1:263) SNRdu(264:end)]; 
+
+figure
+plot(Se,SNRa)
+hold on
+plot(Se,SNRb)
+plot(Se,SNRc)
+plot(Se,SNRd)
+title('Relação SNR e Amplitude do sinal emitido') 
+xlabel('Amplitude do sinal emitido')
+ylabel('SNR mínimo')
+set(gca,'Yscale','log')
+legend('Atenuação  de 0.00','Atenuação de 0.25','Atenuação de 0.50','Atenuação de 0.75')
+grid on
+hold off
