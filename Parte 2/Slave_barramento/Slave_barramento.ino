@@ -1,8 +1,15 @@
+const int led = 4;
+const int trans = 8;
+
 void setup() {
   Serial.begin(9600);
-  pinMode(13,OUTPUT);
-  pinMode(A0,INPUT);
-  digitalWrite(13,LOW);
+  pinMode(led,OUTPUT);//pino de acionamento do LED
+  pinMode(A0,INPUT);//leitura do sensor
+  pinMode(trans,INPUT);//pino ligado aos terminais DE e RE do transceiver
+  digitalWrite(led,LOW);
+  digitalWrite(trans,LOW);//escravo começa 
+  //DE e RE = 0 -> transceiver recebe dados
+  //DE e RE = 1 -> transceiver envia dados
 }
 
 void loop() {
@@ -11,22 +18,24 @@ void loop() {
       delay(15);
       char ordem = Serial.read();
       if (ordem == 'W'){
-        if (digitalRead(13)==LOW){
-        digitalWrite(13,HIGH);
+        if (digitalRead(led)==LOW){
+        digitalWrite(led,HIGH);
         //Serial.print("LED ligado");
         }
         else{
-        digitalWrite(13,LOW);
+        digitalWrite(led,LOW);
         //Serial.print("LED foi desilgado");
         }
     }
     if (ordem == 'R'){
       int temp = analogRead(A0);
-      Serial.print("A"); //confirmação de recebimento do comando de leitura
+      digitalWrite(trans,HIGH);
+      Serial.print("ACK"); //confirmação de recebimento do comando de leitura
       delay(10);
+      Serial.print(temp);
       Serial.flush();
+      digitalWrite(trans,LOW);
     }
   }
   }
 }
-
