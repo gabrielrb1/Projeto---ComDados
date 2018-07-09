@@ -4,7 +4,7 @@ const char* ssid = "COMDADOS_RS485";
 const char* password = "12345678";
 WiFiServer server(80);
 
-int byteReceived;
+byte byteReceived;
 
 void setup() {
   // put your setup code here, to run once:
@@ -45,10 +45,18 @@ void loop() {
   client.flush();
   // Match the request
   if (req.indexOf("1") != -1){
-    client.print("Ligando atuador");
+     if (Serial.available()){
+      byteReceived = Serial.read();
+      client.print(byteReceived);
+      client.flush();
+     }
   }
   if (req.indexOf("2") != -1){
-    client.print("Lendo sensor");
+     if (Serial.available()){
+      byteReceived = Serial.read();
+      client.print(byteReceived);
+      client.flush();
+     }
   }
   client.flush();
 
