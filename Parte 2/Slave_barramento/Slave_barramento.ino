@@ -1,41 +1,59 @@
-const int led = 4;
-const int trans = 8;
+#include <SoftwareSerial.h>
+/*-----( Declare Constants and Pin Numbers )-----*/
+#define SSerialRX        10  //Serial Receive pin
+#define SSerialTX        11  //Serial Transmit pin
 
-void setup() {
+#define SSerialTxControl 3   //RS485 Direction control
+#define RS485Transmit    HIGH
+#define RS485Receive     LOW
+
+#define Pin13LED         13
+
+/*-----( Declare objects )-----*/
+SoftwareSerial RS485Serial(SSerialRX, SSerialTX); // RX, TX
+
+/*-----( Declare Variables )-----*/
+int byteReceived;
+int byteSend;
+
+void setup()   /****** SETUP: RUNS ONCE ******/
+{
+  // Start the built-in serial port, probably to Serial Monitor
   Serial.begin(9600);
-  pinMode(led,OUTPUT);//pino de acionamento do LED
-  pinMode(A0,INPUT);//leitura do sensor
-  pinMode(trans,INPUT);//pino ligado aos terminais DE e RE do transceiver
-  digitalWrite(led,LOW);
-  digitalWrite(trans,LOW);//escravo começa 
-  //DE e RE = 0 -> transceiver recebe dados
-  //DE e RE = 1 -> transceiver envia dados
-}
+  Serial.println("SerialRemote");  // Can be ignored
+  
+  pinMode(Pin13LED, OUTPUT);   
+  pinMode(SSerialTxControl, OUTPUT);  
+  
+  digitalWrite(SSerialTxControl, RS485Receive);  // Init Transceiver
+  
+  // Start the software serial port, to another device
+  RS485Serial.begin(4800);   // set the data rate 
+}//--(end setup )---
 
-void loop() {
-  if (Serial.available()){
-    if (Serial.read() == '2'){//Definição do ID do escravo
-      delay(15);
-      char ordem = Serial.read();
-      if (ordem == 'W'){
-        if (digitalRead(led)==LOW){
-        digitalWrite(led,HIGH);
-        //Serial.print("LED ligado");
-        }
-        else{
-        digitalWrite(led,LOW);
-        //Serial.print("LED foi desilgado");
-        }
-    }
-    if (ordem == 'R'){
-      int temp = analogRead(A0);
-      digitalWrite(trans,HIGH);
-      Serial.print("ACK"); //confirmação de recebimento do comando de leitura
+
+void loop()   /****** LOOP: RUNS CONSTANTLY ******/
+{
+  //Copy input data to output  
+  if (RS485Serial.available()) 
+  {
+    byteSend = RS485Serial.read();   // Read the byte 
+    digitalWrite(Pin13LED, HIGH);  // Show activity
+    delay(10);              
+    digitalWrite(Pin13LED, LOW);   
+    
+    digitalWrite(SSerialTxControl, RS485Transmit);  // Enable RS485 Transmit  
+    if (byteSend == 49){
+      RS485Serial.write("ACK"); 
       delay(10);
-      Serial.print(temp);
-      Serial.flush();
-      digitalWrite(trans,LOW);
+      if (byteSend == 50){
+         RS485Serial.write("Sensor");
+      }
     }
-  }
-  }
+    //RS485Serial.write(byteSend); // Send the byte back
+    delay(10);   
+    digitalWrite(SSerialTxControl, RS485Receive);  // Disable RS485 Transmit      
+//    delay(100);
+  }// End If RS485SerialAvailable
+  
 }
