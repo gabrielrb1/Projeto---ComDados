@@ -1,5 +1,4 @@
 #include <SoftwareSerial.h>
-/*-----( Declare Constants and Pin Numbers )-----*/
 #define SSerialRX        10  //Serial Receive pin
 #define SSerialTX        11  //Serial Transmit pin
 
@@ -7,53 +6,56 @@
 #define RS485Transmit    HIGH
 #define RS485Receive     LOW
 
-#define Pin13LED         13
+#define pinLED         7
+#define sensor A0
 
-/*-----( Declare objects )-----*/
 SoftwareSerial RS485Serial(SSerialRX, SSerialTX); // RX, TX
 
-/*-----( Declare Variables )-----*/
 int byteReceived;
 int byteSend;
 
-void setup()   /****** SETUP: RUNS ONCE ******/
+void setup()
 {
-  // Start the built-in serial port, probably to Serial Monitor
-  Serial.begin(9600);
-  Serial.println("SerialRemote");  // Can be ignored
-  
-  pinMode(Pin13LED, OUTPUT);   
-  pinMode(SSerialTxControl, OUTPUT);  
-  
+
+  Serial.begin(9600);  
+  pinMode(pinLED, OUTPUT);   
+  pinMode(SSerialTxControl, OUTPUT);    
   digitalWrite(SSerialTxControl, RS485Receive);  // Init Transceiver
-  
-  // Start the software serial port, to another device
   RS485Serial.begin(4800);   // set the data rate 
-}//--(end setup )---
+}
 
 
-void loop()   /****** LOOP: RUNS CONSTANTLY ******/
+void loop()
 {
   //Copy input data to output  
   if (RS485Serial.available()) 
   {
     byteSend = RS485Serial.read();   // Read the byte 
-    digitalWrite(Pin13LED, HIGH);  // Show activity
+    //digitalWrite(Pin13LED, HIGH);  // Show activity
     delay(10);              
-    digitalWrite(Pin13LED, LOW);   
+    //digitalWrite(Pin13LED, LOW);   
     
     digitalWrite(SSerialTxControl, RS485Transmit);  // Enable RS485 Transmit  
-    if (byteSend == 49){
+    if (byteSend == 49){ //Valor "1" do command window
       RS485Serial.write("ACK"); 
       delay(10);
-      if (byteSend == 50){
-         RS485Serial.write("Sensor");
+      if (digitalRead(pinLED)){
+        digitalWrite(pinLED,LOW);
+        RS485Serial.write("Desligando atuador");
       }
+      else {
+        digitalWrite(pinLED,HIGH);
+        RS485Serial.write("Ligando Atuador");
+      }      
     }
-    //RS485Serial.write(byteSend); // Send the byte back
+    if (byteSend == 50){//Valor "2" do command window
+      int temp = analogRead(sensor);
+      RS485Serial.write("Lendo sensor");
+      RS485Serial.write(temp);
+    }
+    RS485Serial.write(byteSend); // Send the byte back
     delay(10);   
     digitalWrite(SSerialTxControl, RS485Receive);  // Disable RS485 Transmit      
-//    delay(100);
-  }// End If RS485SerialAvailable
+  }
   
 }
